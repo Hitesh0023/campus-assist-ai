@@ -1,4 +1,4 @@
-# 🎓 CampusBot Pro
+# 🎓 CAMPUS ASSIT AI
 
 > AI-powered college companion — MERN Stack + Google Gemini
 

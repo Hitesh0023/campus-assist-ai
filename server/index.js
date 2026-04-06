@@ -53,7 +53,7 @@ app.use(apiLimiter);
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    message: '🎓 CampusBot Pro API is running!',
+    message: '🎓 CAMPUS ASSIT AI API is running!',
     version: '1.0.0',
     env: process.env.NODE_ENV,
   });
@@ -73,5 +73,5 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ CampusBot Pro running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(`✅ CAMPUS ASSIT AI running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
 });

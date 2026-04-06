@@ -40,7 +40,7 @@ export const TypingIndicator = () => (
       <div className="typing-dot" />
       <div className="typing-dot" />
       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: '0.25rem' }}>
-        CampusBot is thinking...
+        CAMPUS ASSIT AI is thinking...
       </span>
     </div>
   </div>

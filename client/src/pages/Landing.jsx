@@ -20,7 +20,7 @@ const Landing = () => {
       <span className="landing-logo">🎓</span>
 
       <h1 className="landing-title">
-        Campus<span>Bot</span> Pro
+        CAMPUS ASSIT AI
       </h1>
 
       <p className="landing-sub">

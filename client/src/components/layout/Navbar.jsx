@@ -20,7 +20,7 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <NavLink to="/" className="navbar-brand">
-        🎓 Campus<span>Bot</span> Pro
+        🎓 CAMPUS ASSIT AI
       </NavLink>
 
       <ul className="navbar-tabs">
