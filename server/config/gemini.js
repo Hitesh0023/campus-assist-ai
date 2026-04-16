@@ -58,10 +58,14 @@ const generateChat = async (systemPrompt, history, newMessage) => {
       systemInstruction: systemPrompt,
     });
 
-    const geminiHistory = history.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
+    const geminiHistory = history.map(msg => {
+      const text = msg.content ?? msg.message;
+      const role = msg.role === 'assistant' || msg.sender === 'bot' ? 'model' : 'user';
+      return {
+        role,
+        parts: [{ text }]
+      };
+    });
 
     const chat = model.startChat({ history: geminiHistory });
     const result = await chat.sendMessage(newMessage);

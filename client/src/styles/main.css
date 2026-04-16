@@ -204,7 +204,7 @@ p, span, input, textarea, button { font-family: var(--font-body); }
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: all 0.2s var(--bounce));
+  transition: all 0.2s var(--bounce);
   font-family: var(--font-body);
 }
 
@@ -257,6 +257,47 @@ p, span, input, textarea, button { font-family: var(--font-body); }
   font-size: 0.95rem;
   transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
   font-family: var(--font-body);
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.8rem 1rem;
+    justify-content: center;
+    gap: 0.65rem;
+  }
+
+  .navbar-brand {
+    font-size: 1rem;
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .navbar-tabs {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .navbar-tabs a {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.78rem;
+    white-space: normal;
+  }
+
+  .nickname-badge {
+    flex: 1 1 100%;
+    width: fit-content;
+    margin: 0 auto;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .page-content {
+    padding: 1rem 0.9rem;
+  }
 }
 
 .input-field:focus {
@@ -662,7 +703,33 @@ textarea.input-field {
 /* ── Responsive ──────────────────────────────────── */
 @media (max-width: 768px) {
   .page-content { padding: 1rem; }
-  .navbar-tabs { display: none; }
+  .navbar {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+  .navbar-brand {
+    flex: 1 1 100%;
+    font-size: 1.1rem;
+  }
+  .navbar-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+  .navbar-tabs a {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  .nickname-badge {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
   .mode-grid { grid-template-columns: repeat(2, 1fr); }
   .forge-grid { grid-template-columns: 1fr; }
   .forge-grid .full { grid-column: 1; }

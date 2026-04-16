@@ -36,9 +36,21 @@ router.post('/', aiLimiter, async (req, res, next) => {
       message
     );
 
-    // Save both messages to DB
-    session.messages.push({ role: 'user', content: message });
-    session.messages.push({ role: 'assistant', content: aiResponse });
+    // Save both messages to DB using new sender/message structure
+    session.messages.push({
+      sender: 'user',
+      message,
+      timestamp: new Date(),
+      role: 'user',
+      content: message,
+    });
+    session.messages.push({
+      sender: 'bot',
+      message: aiResponse,
+      timestamp: new Date(),
+      role: 'assistant',
+      content: aiResponse,
+    });
     await session.save();
 
     res.json({

@@ -6,9 +6,12 @@ const chatSchema = new mongoose.Schema({
   mode: { type: String, enum: ['fest', 'placement', 'study', 'rant'], default: 'study' },
   messages: [
     {
+      sender: { type: String, enum: ['user', 'bot'], required: true },
+      message: { type: String, required: true },
+      timestamp: { type: Date, default: Date.now },
+      // Keep old fields for compatibility with existing sessions
       role: { type: String, enum: ['user', 'assistant'] },
-      content: { type: String, required: true },
-      timestamp: { type: Date, default: Date.now }
+      content: String
     }
   ]
 }, { timestamps: true });
