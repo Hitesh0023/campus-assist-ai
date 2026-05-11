@@ -266,6 +266,24 @@ p, span, input, textarea, button { font-family: var(--font-body); }
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .navbar-quick-btn {
+    width: auto;
+    height: auto;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+  }
+
+  .navbar-quick-btn span {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
 }
 
 .navbar-quick-btn:hover {
@@ -331,8 +349,9 @@ p, span, input, textarea, button { font-family: var(--font-body); }
 
   .navbar-chat-quick-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     order: 2;
+    align-items: center;
   }
 
   .navbar-mobile-overlay {

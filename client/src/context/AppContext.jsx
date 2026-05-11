@@ -34,6 +34,7 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('cb_token', authToken);
     localStorage.setItem('cb_user', JSON.stringify(loggedUser));
     localStorage.setItem('cb_nickname', loggedUser.nickname || loggedUser.email);
+    api.defaults.headers.common.Authorization = `Bearer ${authToken}`;
     setToken(authToken);
     setUser(loggedUser);
     setNickname(loggedUser.nickname || loggedUser.email);

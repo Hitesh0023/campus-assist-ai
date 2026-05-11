@@ -16,7 +16,7 @@ const Login = () => {
       const { data } = await api.post('/api/auth/login', { email, password });
       login(data);
       addToast('Welcome back!');
-      navigate('/chat');
+      navigate('/chat', { replace: true });
     } catch (err) {
       setError(err.message);
     }

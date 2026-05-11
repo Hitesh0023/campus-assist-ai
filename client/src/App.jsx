@@ -14,12 +14,14 @@ import PlacementDojo from './pages/PlacementDojo';
 import './styles/main.css';
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useApp();
+  const appContext = useApp();
+  const user = appContext?.user;
   return user ? children : <Navigate to="/login" replace />;
 };
 
 const AppShell = () => {
-  const { user } = useApp();
+  const appContext = useApp();
+  const user = appContext?.user;
   const location = useLocation();
   const isChat = location.pathname === '/chat';
 

@@ -49,11 +49,11 @@ const Navbar = () => {
 
       {location.pathname === '/chat' && (
         <div className="navbar-chat-quick-actions">
-          <NavLink to="/chat" className="navbar-quick-btn navbar-quick-btn--new" title="New Chat">
-            ✨
+          <NavLink to="/chat?newChat=true" className="navbar-quick-btn navbar-quick-btn--new" title="New Chat">
+            <span>✨ New</span>
           </NavLink>
           <NavLink to="/history" className="navbar-quick-btn navbar-quick-btn--history" title="History">
-            📚
+            <span>📚 History</span>
           </NavLink>
         </div>
       )}

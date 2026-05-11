@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { TypingIndicator } from '../components/shared';
 import { useApp } from '../context/AppContext';
@@ -14,6 +14,7 @@ const MODES = [
 const ChatHub = () => {
   const { nickname, user } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mode, setMode]           = useState('study');
   const [messages, setMessages]   = useState([]);
   const [input, setInput]         = useState('');
@@ -247,7 +248,7 @@ const ChatHub = () => {
     setShowSaveMenu(false);
   };
 
-  const startNewChat = () => {
+  const startNewChat = useCallback(() => {
     const welcomes = {
       fest:      `Hey ${nickname}! 🎉 I'm FestBot! Ask me anything about college fests, events, or how to make yours legendary!`,
       placement: `Welcome ${nickname}! 💼 I'm your placement mentor. Let's crack those interviews together. What do you need help with?`,
@@ -260,7 +261,17 @@ const ChatHub = () => {
     localStorage.removeItem(`chat_session_${mode}`);
     setMessages([{ sender: 'bot', message: welcomes[mode], image: null, timestamp: new Date() }]);
     setShowSaveMenu(false);
-  };
+  }, [mode, nickname]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('newChat') === 'true') {
+      startNewChat();
+      params.delete('newChat');
+      const newSearch = params.toString();
+      navigate({ pathname: location.pathname, search: newSearch ? `?${newSearch}` : '' }, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate, startNewChat]);
 
   const clearChatHistory = () => {
     if (confirm(`Are you sure you want to clear the chat history for ${MODES.find(m => m.id === mode)?.name}? This cannot be undone.`)) {
@@ -375,7 +386,6 @@ const ChatHub = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const navigate = useNavigate();
   const currentMode = MODES.find(m => m.id === mode);
 
   const formatMessageText = (text, sender) => {
@@ -640,60 +650,6 @@ const ChatHub = () => {
       {/* ── Mobile / Main Content ─────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
 
-        {isMobile && (
-          <div style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 30,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.5rem',
-            padding: '0.75rem 0.85rem',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--bg-card)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-              <span style={{ fontSize: '1rem' }}>💬</span>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Chat Hub</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
-              <button
-                onClick={startNewChat}
-                style={{
-                  padding: '0.45rem 0.75rem',
-                  borderRadius: '999px',
-                  border: '1px solid rgba(124,58,237,0.24)',
-                  background: 'var(--bg-input)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                ✨ New Chat
-              </button>
-              <button
-                onClick={() => navigate('/history')}
-                style={{
-                  padding: '0.45rem 0.75rem',
-                  borderRadius: '999px',
-                  border: '1px solid rgba(124,58,237,0.24)',
-                  background: 'var(--bg-input)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                📚 History
-              </button>
-            </div>
-          </div>
-        )}
-
       {/* ── Chat Messages — takes all remaining height ── */}
       <div
         ref={chatContainerRef}
@@ -766,6 +722,24 @@ const ChatHub = () => {
         ))}
 
         {loading && <TypingIndicator />}
+
+        {!loading && messages.length === 0 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '40vh',
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            padding: '1.5rem',
+          }}>
+            <div>
+              <div style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>No messages yet.</div>
+              <div style={{ fontSize: '0.95rem' }}>Tap "New Chat" or start typing to begin your conversation.</div>
+            </div>
+          </div>
+        )}
+
         <div ref={chatEndRef} />
       </div>
 
