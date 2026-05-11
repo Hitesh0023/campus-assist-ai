@@ -40,6 +40,10 @@ const Landing = () => {
         </button>
       </div>
 
+      <div style={{ marginTop: '1rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+        Already have an account? <a href="/login" style={{ color: 'var(--violet-light)' }}>Login</a> or <a href="/register" style={{ color: 'var(--violet-light)' }}>Register</a>
+      </div>
+
       <div className="features-preview">
         {FEATURES.map((f, i) => (
           <div key={i} className="feature-pill" style={{ animationDelay: `${i * 0.07}s` }}>

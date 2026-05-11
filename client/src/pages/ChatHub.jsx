@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TypingIndicator } from '../components/shared';
 import { useApp } from '../context/AppContext';
 import api from '../utils/api';
@@ -11,15 +11,9 @@ const MODES = [
   { id: 'rant',      emoji: '😤', name: 'Rant Mode',      desc: 'Vent & feel better',     color: '#EC4899' },
 ];
 
-const QUICK_CHIPS = {
-  fest:      ['When is the next fest? 🎊', 'Best events to join?', 'How to join organising committee?', 'Sponsorship ideas 💡'],
-  placement: ['How to crack TCS NQT? 💼', 'Resume tips for freshers', 'Best DSA roadmap?', 'Mock interview tips 🎯'],
-  study:     ['Calculate my CGPA 📊', 'Best study techniques?', 'Explain recursion simply', 'How to focus better? 🧠'],
-  rant:      ['Canteen food is terrible 😭', 'Professor gave 0 internals!', "Exam tomorrow, haven't studied 😱", 'Hostel wifi is dead again'],
-};
-
 const ChatHub = () => {
-  const { nickname } = useApp();
+  const { nickname, user } = useApp();
+  const location = useLocation();
   const [mode, setMode]           = useState('study');
   const [messages, setMessages]   = useState([]);
   const [input, setInput]         = useState('');
@@ -28,24 +22,16 @@ const ChatHub = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState(''); // 'listening' | 'done' | ''
   const [showSaveMenu, setShowSaveMenu] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [historyItems, setHistoryItems] = useState([]);
-  const [showHeader, setShowHeader] = useState(true);
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
   );
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedAttachment, setSelectedAttachment] = useState(null);
   const chatEndRef  = useRef(null);
   const chatContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const lastScrollTopRef = useRef(0);
   const inputRef    = useRef(null);
   const recRef      = useRef(null);
-
-  // Load session ID for current mode from localStorage
-  const loadSessionId = (currentMode) => {
-    const stored = localStorage.getItem(`chat_session_${currentMode}`);
-    return stored || null;
-  };
 
   // Save session ID for current mode to localStorage
   const saveSessionId = (currentMode, id) => {
@@ -54,120 +40,29 @@ const ChatHub = () => {
     }
   };
 
-  // Load chat history for a session
-  const getStoredSessions = () => {
-    try {
-      return JSON.parse(localStorage.getItem('chat_sessions') || '[]');
-    } catch {
-      return [];
-    }
-  };
-
-  const saveStoredSession = (sessionId, currentMode, latestMessage) => {
-    if (!sessionId) return;
-    const stored = getStoredSessions();
-    const modeInfo = MODES.find(m => m.id === currentMode);
-    const existingIndex = stored.findIndex(item => item.sessionId === sessionId);
-    const entry = {
-      sessionId,
-      mode: currentMode,
-      label: `${modeInfo?.name || 'Chat'} • ${new Date().toLocaleDateString()}`,
-      preview: latestMessage || `${modeInfo?.desc || 'Chat session'}...`,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (existingIndex >= 0) {
-      stored[existingIndex] = entry;
-    } else {
-      stored.unshift(entry);
-    }
-
-    localStorage.setItem('chat_sessions', JSON.stringify(stored.slice(0, 12)));
-    setHistoryItems(stored.slice(0, 12));
-  };
-
-  const loadStoredHistory = () => {
-    setHistoryItems(getStoredSessions());
-  };
-
-  const loadChatHistory = async (sessionId, currentMode) => {
-    if (!sessionId) return false;
-    try {
-      const { data } = await api.get(`/api/chat/history/${sessionId}`);
-      if (data.success && data.session.messages && data.session.messages.length > 0) {
-        // Map backend format to required format and support old/new fields
-        const historyMessages = data.session.messages.map(msg => ({
-          sender: msg.sender ? msg.sender : (msg.role === 'user' ? 'user' : 'bot'),
-          message: msg.message ?? msg.content,
-          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
-        }));
-        setMessages(historyMessages);
-        saveStoredSession(sessionId, currentMode, historyMessages[historyMessages.length - 1]?.message);
-        return true;
-      }
-    } catch (err) {
-      console.log('No existing chat history or error loading:', err.message);
-    }
-    return false;
-  };
 
 
   /* ── Welcome message on mode change ─────────────── */
   useEffect(() => {
+    const displayName = nickname || user?.nickname || user?.email || 'Student';
     const welcomes = {
-      fest:      `Hey ${nickname}! 🎉 I'm FestBot! Ask me anything about college fests, events, or how to make yours legendary!`,
-      placement: `Welcome ${nickname}! 💼 I'm your placement mentor. Let's crack those interviews together. What do you need help with?`,
-      study:     `Hi ${nickname}! 📚 I'm StudyBot. Any doubts, CGPA calculations, or concepts you're struggling with?`,
-      rant:      `Yooo ${nickname} 😤 Rant Mode activated! What's bothering you today? I'm all ears (and maybe a few jokes 😂)`,
+      fest:      `Hey ${displayName}! 🎉 I'm FestBot! Ask me anything about college fests, events, or how to make yours legendary!`,
+      placement: `Welcome ${displayName}! 💼 I'm your placement mentor. Let's crack those interviews together. What do you need help with?`,
+      study:     `Hi ${displayName}! 📚 I'm StudyBot. Any doubts, CGPA calculations, or concepts you're struggling with?`,
+      rant:      `Yooo ${displayName} 😤 Rant Mode activated! What's bothering you today? I'm all ears (and maybe a few jokes 😂)`,
     };
 
-    // Load stored sessions for the panel
-    loadStoredHistory();
-
-    // Load existing session ID for this mode
-    const existingSessionId = loadSessionId(mode);
-    setSessionId(existingSessionId);
-
-    // Try to load existing chat history
-    loadChatHistory(existingSessionId, mode).then((hasHistory) => {
-      if (!hasHistory) {
-        // Show welcome message for new session or if no history
-        setMessages([{ sender: 'bot', message: welcomes[mode], timestamp: new Date() }]);
-      }
-    });
-  }, [mode, nickname]);
+    setSessionId(null);
+    setMessages([{ sender: 'bot', message: welcomes[mode], image: null, timestamp: new Date() }]);
+  }, [mode, nickname, user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
   useEffect(() => {
-    const container = chatContainerRef.current;
-    if (!container) return;
-    const handleScroll = () => {
-      if (isMobile) {
-        lastScrollTopRef.current = container.scrollTop;
-        if (showHistory) setShowHistory(false);
-        return;
-      }
-
-      const currentTop = container.scrollTop;
-      const isScrollingDown = currentTop > lastScrollTopRef.current;
-      if (isScrollingDown && currentTop > 20) {
-        setShowHeader(false);
-      } else {
-        setShowHeader(true);
-      }
-      lastScrollTopRef.current = currentTop;
-      if (showHistory) setShowHistory(false);
-    };
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [isMobile, showHistory]);
-
-  useEffect(() => {
     const updateIsMobile = () => {
-      setIsMobile(window.matchMedia('(max-width: 768px)').matches);
+      setIsMobile(window.matchMedia('(max-width: 900px)').matches);
     };
     updateIsMobile();
     window.addEventListener('resize', updateIsMobile);
@@ -175,8 +70,31 @@ const ChatHub = () => {
   }, []);
 
   useEffect(() => {
-    if (!isMobile) setMobileMenuOpen(false);
-  }, [isMobile]);
+    const params = new URLSearchParams(location.search);
+    const openSessionId = params.get('sessionId');
+    if (!openSessionId) return;
+
+    const loadSession = async () => {
+      try {
+        const { data } = await api.get(`/api/chat/history/${openSessionId}`);
+        const session = data.session;
+        if (session) {
+          setMode(session.mode || 'study');
+          setSessionId(session._id);
+          setMessages(session.messages?.length > 0 ? session.messages.map(msg => ({
+            sender: msg.sender,
+            message: msg.message || msg.content || '',
+            attachment: msg.attachment || null,
+            timestamp: msg.timestamp || msg.createdAt || new Date()
+          })) : [{ sender: 'bot', message: `Welcome back! This session has no saved messages.`, image: null, timestamp: new Date() }]);
+        }
+      } catch (err) {
+        setMessages(prev => [...prev, { sender: 'bot', message: `❌ Unable to load saved session: ${err.message}`, image: null, timestamp: new Date() }]);
+      }
+    };
+
+    loadSession();
+  }, [location.search]);
 
   // Close save menu when clicking outside
   useEffect(() => {
@@ -193,18 +111,59 @@ const ChatHub = () => {
   /* ── Send message ────────────────────────────────── */
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
-    if (!msg || loading) return;
+    const hasAttachment = !!selectedAttachment;
+    if ((!msg && !hasAttachment) || loading) return;
+
+    const displayText = msg || `📎 Attached file: ${selectedAttachment.name}`;
+
+    // Prepare payload
+    let payload;
+    let config = {};
+
+    if (selectedAttachment && selectedAttachment.file) {
+      // Use FormData for file uploads
+      payload = new FormData();
+      payload.append('nickname', nickname);
+      payload.append('message', msg);
+      payload.append('mode', mode);
+      if (sessionId) payload.append('sessionId', sessionId);
+      payload.append('file', selectedAttachment.file);
+      config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      };
+    } else {
+      // Use JSON for text-only messages or legacy attachments
+      payload = { nickname, message: msg, mode, sessionId };
+      if (selectedAttachment) {
+        payload.attachment = {
+          name: selectedAttachment.name,
+          type: selectedAttachment.type,
+          size: selectedAttachment.size,
+          data: selectedAttachment.data,
+          text: selectedAttachment.text,
+        };
+      }
+    }
+
     setInput('');
-    setMessages(prev => [...prev, { sender: 'user', message: msg, timestamp: new Date() }]);
+    setMessages(prev => [...prev, {
+      sender: 'user',
+      message: displayText,
+      attachment: selectedAttachment,
+      timestamp: new Date()
+    }]);// keep visual attachment in the chat while sending
+    removeSelectedAttachment();
     setLoading(true);
+
     try {
-      const { data } = await api.post('/api/chat', { nickname, message: msg, mode, sessionId });
-      setMessages(prev => [...prev, { sender: 'bot', message: data.response, timestamp: new Date() }]);
+      const { data } = await api.post('/api/chat', payload, config);
+      setMessages(prev => [...prev, { sender: 'bot', message: data.response, image: null, timestamp: new Date() }]);
       setSessionId(data.sessionId);
-      saveSessionId(mode, data.sessionId); // Save to localStorage
-      saveStoredSession(data.sessionId, mode, data.response);
+      saveSessionId(mode, data.sessionId);
     } catch (err) {
-      setMessages(prev => [...prev, { sender: 'bot', message: `❌ Oops! ${err.message}. Check if the server is running.`, timestamp: new Date() }]);
+      setMessages(prev => [...prev, { sender: 'bot', message: `❌ Oops! ${err.message}. Check if the server is running.`, image: null, timestamp: new Date() }]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -213,6 +172,29 @@ const ChatHub = () => {
 
   const handleKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  };
+
+  const handlePaste = async (e) => {
+    if (!e.clipboardData) return;
+    const imageItem = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'));
+    if (!imageItem) return;
+
+    e.preventDefault();
+    const blob = imageItem.getAsFile();
+    if (!blob) return;
+
+    const file = new File([blob], `pasted-image.${blob.type.split('/')[1] || 'png'}`, { type: blob.type });
+    const dataUrl = await readFileAsDataURL(file);
+    const attachment = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      data: dataUrl,
+      text: null,
+      isImage: true,
+    };
+
+    setSelectedAttachment(attachment);
   };
 
   // Save chat history as JSON
@@ -276,9 +258,8 @@ const ChatHub = () => {
     setSessionId(null);
     setInput('');
     localStorage.removeItem(`chat_session_${mode}`);
-    setMessages([{ sender: 'bot', message: welcomes[mode], timestamp: new Date() }]);
+    setMessages([{ sender: 'bot', message: welcomes[mode], image: null, timestamp: new Date() }]);
     setShowSaveMenu(false);
-    setShowHistory(false);
   };
 
   const clearChatHistory = () => {
@@ -292,7 +273,7 @@ const ChatHub = () => {
         study:     `Hi ${nickname}! 📚 I'm StudyBot. Any doubts, CGPA calculations, or concepts you're struggling with?`,
         rant:      `Yooo ${nickname} 😤 Rant Mode activated! What's bothering you today? I'm all ears (and maybe a few jokes 😂)`,
       };
-      setMessages([{ sender: 'bot', message: welcomes[mode], timestamp: new Date() }]);
+      setMessages([{ sender: 'bot', message: welcomes[mode], image: null, timestamp: new Date() }]);
       setShowSaveMenu(false);
     }
   };
@@ -340,540 +321,385 @@ const ChatHub = () => {
     rec.start();
   };
 
+  const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const readFileAsText = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isTextFile = file.type.startsWith('text/') || /\.(js|ts|tsx|jsx|json|html|css|md|py|java|c|cpp|cs|sh)$/i.test(file.name);
+    const isDocument = file.type === 'application/pdf' ||
+                      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                      file.type === 'application/msword';
+
+    const attachment = {
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      data: null,
+      text: null,
+      isImage,
+      file: file, // Store the actual file for upload
+    };
+
+    if (isImage) {
+      attachment.data = await readFileAsDataURL(file);
+    } else if (isTextFile) {
+      attachment.text = await readFileAsText(file);
+      attachment.data = await readFileAsDataURL(file);
+    } else if (isDocument) {
+      // For documents, just store the file - text will be extracted on server
+      attachment.data = await readFileAsDataURL(file);
+    } else {
+      attachment.data = await readFileAsDataURL(file);
+    }
+
+    setSelectedAttachment(attachment);
+  };
+
+  const removeSelectedAttachment = () => {
+    setSelectedAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const navigate = useNavigate();
   const currentMode = MODES.find(m => m.id === mode);
-  const effectiveShowHeader = isMobile || showHeader;
 
-  const mobileNavItems = [
-    { label: 'BrainSpace', action: () => navigate('/brainstorm') },
-    { label: 'TalentArena', action: () => navigate('/talent') },
-    { label: 'CreatorCorner', action: () => navigate('/creator') },
-    { label: 'PlacementDojo', action: () => navigate('/placement') },
-  ];
+  const formatMessageText = (text, sender) => {
+    if (!text) return '';
+    if (sender !== 'bot') return text;
+    return text
+      .replace(/^\s*###\s+/gm, '💡 ')
+      .replace(/^\s*##\s+/gm, '✨ ')
+      .replace(/^\s*#\s+/gm, '🎯 ')
+      .replace(/^\s*(?:[-*+]|•)\s+/gm, '👉 ')
+      .replace(/^\s*(\d+)\.\s+/gm, '$1️⃣ ')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/\bimportant\b/gi, 'important ⚡')
+      .replace(/\bnote\b/gi, 'note 📝')
+      .replace(/\btip\b/gi, 'tip 💡')
+      .replace(/\bwarning\b/gi, 'warning ⚠️');
+  };
+
+  const formatAttachmentSize = (bytes) => {
+    if (!bytes) return '0 B';
+    const kb = 1024;
+    if (bytes < kb) return `${bytes} B`;
+    const units = ['KB', 'MB', 'GB'];
+    let value = bytes / kb;
+    let unitIndex = 0;
+    while (value >= kb && unitIndex < units.length - 1) {
+      value /= kb;
+      unitIndex += 1;
+    }
+    return `${value.toFixed(1)} ${units[unitIndex]}`;
+  };
+
+  const renderAttachment = (attachment) => {
+    if (!attachment) return null;
+
+    const isImage = attachment.type?.startsWith('image/');
+    const fileUrl = attachment.data;
+
+    return (
+      <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)' }}>
+        {isImage ? (
+          <img
+            src={fileUrl}
+            alt={attachment.name}
+            style={{ width: '100%', borderRadius: 14, maxHeight: 260, objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.85rem', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>{attachment.name}</div>
+              <div style={{ color: 'var(--text-subtle)', fontSize: '0.87rem' }}>{attachment.type || 'File'} • {formatAttachmentSize(attachment.size)}</div>
+            </div>
+            {fileUrl && (
+              <a
+                href={fileUrl}
+                download={attachment.name}
+                style={{ color: currentMode.color, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                ⬇️ Download
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{
       display: 'flex',
-      flexDirection: 'column',
+      flexDirection: isMobile ? 'column' : 'row',
       height: 'calc(100vh - var(--nav-h))',
       padding: '0',
-      maxWidth: 820,
+      maxWidth: 1280,
       margin: '0 auto',
       width: '100%',
+      minWidth: 0,
+      gap: isMobile ? 0 : '1.5rem',
     }}>
 
-      {/* ── Compact Mode Selector Bar ─────────────────── */}
-      <div style={{
-        display: 'flex',
-        gap: '0.5rem',
-        padding: effectiveShowHeader ? '0.85rem 1rem' : '0 1rem',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--bg-card)',
-        borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
-        flexShrink: 0,
-        flexWrap: 'wrap',
-        position: 'sticky',
-        top: 0,
-        zIndex: 20,
-        maxHeight: effectiveShowHeader ? 260 : 0,
-        overflow: 'hidden',
-        transform: effectiveShowHeader ? 'translateY(0)' : 'translateY(-10%)',
-        transition: 'max-height 0.25s ease, padding 0.25s ease, transform 0.25s ease',
-      }}>
-        {/* Title inline */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem' }}>
-          <span style={{ fontSize: '1.1rem' }}>💬</span>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', color: 'var(--text)' }}>Chat Hub</span>
-        </div>
+      {!isMobile && (
+        <aside style={{
+          width: 320,
+          minWidth: 320,
+          background: 'var(--bg-card)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem',
+          padding: '1.5rem',
+          overflowY: 'auto',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '1.35rem' }}>💬</span>
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', color: 'var(--text)' }}>Chat Hub</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5 }}>Pick a mode and jump into chat.</div>
+              </div>
+            </div>
+            <button
+              onClick={startNewChat}
+              style={{
+                width: '100%',
+                padding: '0.95rem 1rem',
+                borderRadius: '18px',
+                border: '1px solid rgba(124,58,237,0.3)',
+                background: 'rgba(124,58,237,0.08)',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                fontFamily: 'var(--font-body)',
+                marginBottom: '1rem',
+              }}
+            >
+              ✨ New Chat
+            </button>
+          </div>
 
-        {/* New chat + history controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {!isMobile && (
-            <>
+          <div style={{ display: 'grid', gap: '0.7rem' }}>
+            {MODES.map(m => {
+              const active = mode === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => setMode(m.id)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.8rem',
+                    padding: '0.9rem 1rem',
+                    borderRadius: '18px',
+                    border: active ? `1px solid ${m.color}` : '1px solid var(--border)',
+                    background: active ? `linear-gradient(135deg, ${m.color}22, ${m.color}15)` : 'var(--bg-input)',
+                    color: active ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    fontFamily: 'var(--font-body)',
+                    textAlign: 'left',
+                    transition: 'transform 0.18s ease, border-color 0.18s ease, background 0.18s ease',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <span style={{ fontSize: '1.05rem' }}>{m.emoji}</span>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{m.name}</div>
+                    <div style={{ color: active ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)', fontSize: '0.82rem' }}>{m.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => navigate('/history')}
+            style={{
+              width: '100%',
+              padding: '0.95rem 1rem',
+              borderRadius: '18px',
+              border: '1px solid rgba(16,185,129,0.3)',
+              background: 'rgba(16,185,129,0.08)',
+              color: 'var(--text)',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              fontFamily: 'var(--font-body)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+            }}
+          >
+            <span>📚</span>
+            <span>History</span>
+          </button>
+
+          <div style={{ display: 'grid', gap: '0.85rem' }}>
+            <button
+              onClick={() => setShowSaveMenu(prev => !prev)}
+              style={{
+                width: '100%',
+                padding: '0.95rem 1rem',
+                borderRadius: '18px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-input)',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                fontFamily: 'var(--font-body)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span>Save / Export</span>
+              <span>💾</span>
+            </button>
+            {showSaveMenu && (
+              <div style={{ display: 'grid', gap: '0.5rem', padding: '0.75rem 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                <button
+                  onClick={saveChatAsJSON}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '14px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  📄 Save as JSON
+                </button>
+                <button
+                  onClick={saveChatAsText}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '14px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  📝 Save as Text
+                </button>
+                <button
+                  onClick={clearChatHistory}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(239,68,68,0.35)',
+                    background: 'rgba(239,68,68,0.12)',
+                    color: '#EF4444',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  🗑️ Clear History
+                </button>
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {/* ── Mobile / Main Content ─────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+
+        {isMobile && (
+          <div style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 30,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+            padding: '0.75rem 0.85rem',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--bg-card)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+              <span style={{ fontSize: '1rem' }}>💬</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Chat Hub</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
               <button
                 onClick={startNewChat}
                 style={{
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '50px',
-                  border: '2px solid var(--border)',
+                  padding: '0.45rem 0.75rem',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(124,58,237,0.24)',
                   background: 'var(--bg-input)',
-                  color: 'var(--text-muted)',
+                  color: 'var(--text)',
                   cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.82rem',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 ✨ New Chat
               </button>
               <button
-                onClick={() => setShowHistory(prev => !prev)}
+                onClick={() => navigate('/history')}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '50px',
-                  border: showHistory ? `2px solid ${currentMode.color}` : '2px solid var(--border)',
-                  background: showHistory ? `${currentMode.color}14` : 'var(--bg-input)',
-                  color: showHistory ? currentMode.color : 'var(--text-muted)',
+                  padding: '0.45rem 0.75rem',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(124,58,237,0.24)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text)',
                   cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  fontFamily: 'var(--font-body)',
-                  transition: 'background 0.2s, border-color 0.2s, color 0.2s',
+                  fontSize: '0.82rem',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 📚 History
-                <span style={{ transform: showHistory ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▾</span>
               </button>
-            </>
-          )}
-          {isMobile && (
-            <button
-              onClick={() => setMobileMenuOpen(prev => !prev)}
-              style={{
-                padding: '0.4rem 0.85rem',
-                borderRadius: '50px',
-                border: '2px solid var(--border)',
-                background: 'var(--bg-input)',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              ☰ Menu
-            </button>
-          )}
-        </div>
-
-        {/* Mode pills — compact */}
-        {!isMobile && MODES.map(m => {
-          const active = mode === m.id;
-          return (
-            <button
-              key={m.id}
-              onClick={() => setMode(m.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.4rem 0.9rem',
-                borderRadius: '50px',
-                border: active ? `2px solid ${m.color}` : '2px solid var(--border)',
-                background: active ? `${m.color}18` : 'var(--bg-input)',
-                color: active ? m.color : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: active ? 700 : 400,
-                fontFamily: 'var(--font-body)',
-                transition: 'all 0.18s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span style={{ fontSize: '1rem' }}>{m.emoji}</span>
-              <span>{m.name}</span>
-            </button>
-          );
-        })}
-
-        {/* Save Menu Button */}
-        {!isMobile && (
-          <div style={{ marginLeft: 'auto', position: 'relative' }} data-save-menu>
-            <button
-              onClick={() => setShowSaveMenu(!showSaveMenu)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.4rem 0.9rem',
-                borderRadius: '50px',
-                border: '2px solid var(--border)',
-                background: 'var(--bg-input)',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: 400,
-                fontFamily: 'var(--font-body)',
-                transition: 'all 0.18s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span style={{ fontSize: '1rem' }}>💾</span>
-              <span>Save</span>
-            </button>
-
-          {/* Save Menu Dropdown */}
-          {showSaveMenu && (
-            <div data-save-menu style={{
-              position: 'absolute',
-              top: '100%',
-              right: 0,
-              marginTop: '0.5rem',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              zIndex: 1000,
-              minWidth: '180px',
-            }}>
-              <button
-                onClick={saveChatAsJSON}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: 'none',
-                  background: 'none',
-                  color: 'var(--text)',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontFamily: 'var(--font-body)',
-                  borderRadius: '8px 8px 0 0',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => e.target.style.background = 'var(--bg-hover)'}
-                onMouseLeave={e => e.target.style.background = 'none'}
-              >
-                📄 Save as JSON
-              </button>
-              <button
-                onClick={saveChatAsText}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: 'none',
-                  background: 'none',
-                  color: 'var(--text)',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontFamily: 'var(--font-body)',
-                  borderTop: '1px solid var(--border)',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => e.target.style.background = 'var(--bg-hover)'}
-                onMouseLeave={e => e.target.style.background = 'none'}
-              >
-                📝 Save as Text
-              </button>
-              <button
-                onClick={clearChatHistory}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  border: 'none',
-                  background: 'none',
-                  color: '#EF4444',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontFamily: 'var(--font-body)',
-                  borderTop: '1px solid var(--border)',
-                  borderRadius: '0 0 8px 8px',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => e.target.style.background = 'rgba(239,68,68,0.1)'}
-                onMouseLeave={e => e.target.style.background = 'none'}
-              >
-                🗑️ Clear History
-              </button>
-            </div>
-          )}
-        </div>
-        )}
-
-        {showHistory && (
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            zIndex: 50,
-            marginTop: '0.8rem',
-            padding: '0 1rem',
-            overflow: 'hidden',
-            maxHeight: showHistory ? '420px' : '0',
-            opacity: showHistory ? 1 : 0,
-            transition: 'max-height 0.25s ease, opacity 0.25s ease',
-            pointerEvents: showHistory ? 'auto' : 'none',
-          }}>
-            <div style={{
-              padding: '1rem',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '18px',
-              boxShadow: '0 18px 45px rgba(0,0,0,0.08)',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.8rem', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Recent chats</div>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-subtle)' }}>Tap a chat to reopen history.</div>
-                </div>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('chat_sessions');
-                    setHistoryItems([]);
-                  }}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '0.82rem',
-                  }}
-                >
-                  Clear all
-                </button>
-              </div>
-
-              {historyItems.length === 0 ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>No previous chats saved yet. Start a new chat or use the current session.</div>
-              ) : (
-                <div style={{ display: 'grid', gap: '0.7rem' }}>
-                  {historyItems.map(item => {
-                    const itemMode = MODES.find(m => m.id === item.mode);
-                    return (
-                      <button
-                        key={item.sessionId}
-                        onClick={() => {
-                          setMode(item.mode);
-                          setShowHistory(false);
-                          setSessionId(item.sessionId);
-                          loadChatHistory(item.sessionId, item.mode);
-                        }}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          borderRadius: '14px',
-                          border: '1px solid var(--border)',
-                          background: 'var(--bg-input)',
-                          padding: '0.85rem 1rem',
-                          cursor: 'pointer',
-                          color: 'var(--text)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.25rem' }}>
-                          <span style={{ fontSize: '1rem' }}>{itemMode?.emoji || '💬'}</span>
-                          <div>
-                            <div style={{ fontWeight: 700 }}>{item.label}</div>
-                            <div style={{ fontSize: '0.79rem', color: 'var(--text-muted)' }}>{itemMode?.name || 'Chat'}</div>
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '0.84rem', color: 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.preview}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </div>
         )}
-      </div>
-
-      {isMobile && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem',
-          padding: '0.75rem 1rem',
-          background: 'var(--bg-card)',
-          borderTop: '1px solid var(--border)',
-          borderBottom: '1px solid var(--border)',
-          zIndex: 22,
-          position: 'sticky',
-          top: 0,
-        }}>
-          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)' }}>Chat Menu</div>
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            style={{
-              padding: '0.6rem 0.85rem',
-              borderRadius: '14px',
-              border: '1px solid var(--border)',
-              background: 'var(--bg-input)',
-              color: 'var(--text)',
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-            }}
-          >
-            ☰ Open
-          </button>
-        </div>
-      )}
-
-      {isMobile && mobileMenuOpen && (
-        <>
-          <div style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.35)',
-            zIndex: 40,
-          }} onClick={() => setMobileMenuOpen(false)} />
-          <aside style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: '78%',
-            maxWidth: 320,
-            background: 'var(--bg-card)',
-            zIndex: 50,
-            padding: '1rem',
-            boxShadow: '4px 0 30px rgba(0,0,0,0.35)',
-            overflowY: 'auto',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '1rem', fontWeight: 700 }}>Menu</div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  color: 'var(--text-muted)',
-                  fontSize: '1.25rem',
-                  cursor: 'pointer',
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <button
-              onClick={() => { startNewChat(); setMobileMenuOpen(false); }}
-              style={{
-                width: '100%',
-                padding: '0.95rem 1rem',
-                borderRadius: '18px',
-                border: '1px solid var(--border)',
-                background: 'var(--bg-input)',
-                color: 'var(--text)',
-                fontSize: '0.95rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                marginBottom: '0.75rem',
-                textAlign: 'left',
-              }}
-            >
-              ✨ New Chat
-            </button>
-            <button
-              onClick={() => { setShowHistory(prev => !prev); setMobileMenuOpen(false); }}
-              style={{
-                width: '100%',
-                padding: '0.95rem 1rem',
-                borderRadius: '18px',
-                border: '1px solid var(--border)',
-                background: 'var(--bg-input)',
-                color: 'var(--text)',
-                fontSize: '0.95rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                marginBottom: '0.75rem',
-                textAlign: 'left',
-              }}
-            >
-              📚 History
-            </button>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Pages</div>
-              <div style={{ display: 'grid', gap: '0.65rem' }}>
-                {mobileNavItems.map(item => (
-                  <button
-                    key={item.label}
-                    onClick={() => { item.action(); setMobileMenuOpen(false); }}
-                    style={{
-                      width: '100%',
-                      borderRadius: '16px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-input)',
-                      color: 'var(--text)',
-                      padding: '0.9rem 1rem',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Save</div>
-              <button
-                onClick={() => { saveChatAsJSON(); setMobileMenuOpen(false); }}
-                style={{
-                  width: '100%',
-                  padding: '0.95rem 1rem',
-                  borderRadius: '18px',
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg-input)',
-                  color: 'var(--text)',
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  marginBottom: '0.75rem',
-                  textAlign: 'left',
-                }}
-              >
-                💾 Save as JSON
-              </button>
-              <button
-                onClick={() => { saveChatAsText(); setMobileMenuOpen(false); }}
-                style={{
-                  width: '100%',
-                  padding: '0.95rem 1rem',
-                  borderRadius: '18px',
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg-input)',
-                  color: 'var(--text)',
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  marginBottom: '1.5rem',
-                  textAlign: 'left',
-                }}
-              >
-                💾 Save as Text
-              </button>
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Modes</div>
-              <div style={{ display: 'grid', gap: '0.65rem' }}>
-                {MODES.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => { setMode(m.id); setMobileMenuOpen(false); }}
-                    style={{
-                      width: '100%',
-                      borderRadius: '16px',
-                      border: `1px solid ${mode === m.id ? m.color : 'var(--border)'}`,
-                      background: mode === m.id ? `${m.color}20` : 'var(--bg-input)',
-                      color: mode === m.id ? m.color : 'var(--text-muted)',
-                      padding: '0.9rem 1rem',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      fontSize: '0.95rem',
-                    }}
-                  >
-                    <span>{m.emoji}</span>
-                    <span>{m.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
-        </>
-      )}
 
       {/* ── Chat Messages — takes all remaining height ── */}
       <div
         ref={chatContainerRef}
         style={{
           flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -907,61 +733,40 @@ const ChatHub = () => {
 
             {/* Bubble */}
             <div style={{
-              maxWidth: '72%',
-              padding: '0.85rem 1.1rem',
+              maxWidth: '86%',
               borderRadius: msg.sender === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-              fontSize: '0.97rem',
-              lineHeight: 1.7,
-              letterSpacing: '0.01em',
-              whiteSpace: 'pre-wrap',
               background: msg.sender === 'user'
                 ? `linear-gradient(135deg, ${currentMode.color}CC, ${currentMode.color}99)`
                 : 'var(--bg-elevated)',
-              color: msg.sender === 'user' ? '#fff' : 'var(--text)',
               border: msg.sender === 'user' ? 'none' : '1px solid var(--border)',
               boxShadow: msg.sender === 'user' ? `0 4px 15px ${currentMode.color}30` : 'none',
+              overflow: 'hidden',
             }}>
-              {msg.message}
+              {renderAttachment(msg.attachment || (msg.image ? {
+                name: 'attachment',
+                type: 'image/*',
+                size: 0,
+                data: msg.image,
+                isImage: true,
+              } : null))}
+              <div style={{
+                padding: '1rem 1.2rem',
+                fontSize: '1.08rem',
+                lineHeight: 1.95,
+                letterSpacing: '0.01em',
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+                whiteSpace: 'pre-wrap',
+                color: msg.sender === 'user' ? '#fff' : 'var(--text)',
+              }}>
+                {formatMessageText(msg.message, msg.sender)}
+              </div>
             </div>
           </div>
         ))}
 
         {loading && <TypingIndicator />}
         <div ref={chatEndRef} />
-      </div>
-
-      {/* ── Quick Chips ───────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        gap: '0.5rem',
-        flexWrap: 'wrap',
-        padding: '0.6rem 1rem',
-        background: 'var(--bg-card)',
-        borderTop: '1px solid var(--border)',
-        flexShrink: 0,
-      }}>
-        {QUICK_CHIPS[mode].map((chip, i) => (
-          <button
-            key={i}
-            onClick={() => sendMessage(chip)}
-            style={{
-              padding: '0.38rem 0.85rem',
-              borderRadius: '50px',
-              border: '1px solid var(--border)',
-              background: 'var(--bg-input)',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: '0.82rem',
-              fontFamily: 'var(--font-body)',
-              transition: 'all 0.15s',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={e => { e.target.style.borderColor = currentMode.color; e.target.style.color = currentMode.color; }}
-            onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--text-muted)'; }}
-          >
-            {chip}
-          </button>
-        ))}
       </div>
 
       {/* ── Voice Status Banner ───────────────────────── */}
@@ -995,6 +800,7 @@ const ChatHub = () => {
       {/* ── Input Bar ─────────────────────────────────── */}
       <div style={{
         display: 'flex',
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
         alignItems: 'center',
         gap: '0.75rem',
         padding: '0.85rem 1rem',
@@ -1006,6 +812,33 @@ const ChatHub = () => {
         bottom: 0,
         zIndex: 20,
       }}>
+
+        {/* Attachment Upload Button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          title="Attach a file or paste an image"
+          style={{
+            width: 44, height: 44,
+            borderRadius: '50%',
+            border: `2px solid ${selectedAttachment ? currentMode.color : 'var(--border)'}`,
+            background: selectedAttachment ? `${currentMode.color}20` : 'var(--bg-input)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.2rem',
+            flexShrink: 0,
+            transition: 'all 0.2s',
+          }}
+        >
+          📎
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,text/*,application/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
 
         {/* Voice Button */}
         <button
@@ -1027,39 +860,91 @@ const ChatHub = () => {
           {isRecording ? '🔴' : '🎤'}
         </button>
 
-        {/* Text input — grows with content */}
-        <textarea
-          ref={inputRef}
-          rows={1}
-          value={input}
-          onChange={e => {
-            setInput(e.target.value);
-            // Auto-grow
-            e.target.style.height = 'auto';
-            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-          }}
-          onKeyDown={handleKey}
-          placeholder={`Message ${currentMode.name}... (Enter to send, Shift+Enter for new line)`}
-          disabled={loading}
-          style={{
-            flex: 1,
-            background: 'var(--bg-input)',
-            border: `1.5px solid ${input.trim() ? currentMode.color + '60' : 'var(--border)'}`,
-            borderRadius: 16,
-            color: 'var(--text)',
-            padding: '0.75rem 1.1rem',
-            fontSize: '0.97rem',
-            lineHeight: 1.5,
-            fontFamily: 'var(--font-body)',
-            resize: 'none',
-            overflowY: 'hidden',
-            transition: 'border-color 0.2s, box-shadow 0.2s',
-            boxShadow: input.trim() ? `0 0 0 3px ${currentMode.color}15` : 'none',
-            outline: 'none',
-            minHeight: 44,
-            maxHeight: 120,
-          }}
-        />
+        {/* Input Container */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 0 }}>
+          {selectedAttachment && (
+            <div style={{ position: 'relative', width: '100%', maxWidth: isMobile ? '100%' : 140 }}>
+              {selectedAttachment.isImage && selectedAttachment.data ? (
+                <img
+                  src={selectedAttachment.data}
+                  alt="preview"
+                  style={{ width: '100%', borderRadius: 12, maxHeight: isMobile ? 180 : 120, objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%',
+                  minHeight: 80,
+                  borderRadius: 16,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-input)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  padding: '0.85rem 1rem',
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{selectedAttachment.name}</div>
+                  <div style={{ color: 'var(--text-subtle)', fontSize: '0.85rem' }}>
+                    {selectedAttachment.type || 'File'} • {formatAttachmentSize(selectedAttachment.size)}
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={removeSelectedAttachment}
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: '#EF4444',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <textarea
+            ref={inputRef}
+            rows={1}
+            value={input}
+            onChange={e => {
+              setInput(e.target.value);
+              // Auto-grow
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+            }}
+            onKeyDown={handleKey}
+            onPaste={handlePaste}
+            placeholder={`Message ${currentMode.name}... (Enter to send, Shift+Enter for new line). Paste an image or attach a file.`}
+            disabled={loading}
+            style={{
+              flex: 1,
+              background: 'var(--bg-input)',
+              border: `1.5px solid ${input.trim() ? currentMode.color + '60' : 'var(--border)'}`,
+              borderRadius: 16,
+              color: 'var(--text)',
+              padding: '0.75rem 1.1rem',
+              fontSize: '0.97rem',
+              lineHeight: 1.5,
+              fontFamily: 'var(--font-body)',
+              resize: 'none',
+              overflowY: 'hidden',
+              transition: 'border-color 0.2s, box-shadow 0.2s',
+              boxShadow: input.trim() ? `0 0 0 3px ${currentMode.color}15` : 'none',
+              outline: 'none',
+              minHeight: 44,
+              maxHeight: 120,
+            }}
+          />
+        </div>
 
         {/* Send Button */}
         <button
@@ -1086,18 +971,8 @@ const ChatHub = () => {
         </button>
       </div>
 
-      {/* Inline CSS for pulse animations */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.8); }
-        }
-        @keyframes voicePulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
-          50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
-        }
-      `}</style>
     </div>
+  </div>
   );
 };
 

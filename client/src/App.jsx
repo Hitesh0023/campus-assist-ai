@@ -3,6 +3,9 @@ import { AppProvider, useApp } from './context/AppContext';
 import Navbar from './components/layout/Navbar';
 import { ToastContainer } from './components/shared';
 import Landing from './pages/Landing';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import History from './pages/History';
 import ChatHub from './pages/ChatHub';
 import BrainSpace from './pages/BrainSpace';
 import TalentArena from './pages/TalentArena';
@@ -11,21 +14,23 @@ import PlacementDojo from './pages/PlacementDojo';
 import './styles/main.css';
 
 const ProtectedRoute = ({ children }) => {
-  const { nickname } = useApp();
-  return nickname ? children : <Navigate to="/" replace />;
+  const { user } = useApp();
+  return user ? children : <Navigate to="/login" replace />;
 };
 
 const AppShell = () => {
-  const { nickname } = useApp();
+  const { user } = useApp();
   const location = useLocation();
   const isChat = location.pathname === '/chat';
 
   return (
     <div className="app-layout">
-      {nickname && <Navbar />}
+      {user && <Navbar />}
 
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         {/* Chat Hub — full height, zero padding wrapper */}
         <Route path="/chat" element={
@@ -39,6 +44,11 @@ const AppShell = () => {
             }}>
               <ChatHub />
             </div>
+          </ProtectedRoute>
+        } />
+        <Route path="/history" element={
+          <ProtectedRoute>
+            <History />
           </ProtectedRoute>
         } />
 

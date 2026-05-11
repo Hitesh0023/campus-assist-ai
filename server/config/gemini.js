@@ -50,8 +50,9 @@ const generateContent = async (systemPrompt, userMessage) => {
 
 /**
  * Multi-turn chat (with history for ongoing conversations)
+ * Supports multimodal content (images, PDFs) via base64
  */
-const generateChat = async (systemPrompt, history, newMessage) => {
+const generateChat = async (systemPrompt, history, newMessage, fileData = null) => {
   return withRetry(async () => {
     const model = genAI.getGenerativeModel({
       model: MODEL_NAME,
@@ -67,8 +68,33 @@ const generateChat = async (systemPrompt, history, newMessage) => {
       };
     });
 
+    // Build message content with file data if provided
+    const messageParts = [];
+
+    // Add file content if provided (image or PDF)
+    if (fileData) {
+      if (fileData.isImage) {
+        messageParts.push({
+          inlineData: {
+            mimeType: fileData.mimeType,
+            data: fileData.base64,
+          },
+        });
+      } else if (fileData.isPdf) {
+        messageParts.push({
+          inlineData: {
+            mimeType: 'application/pdf',
+            data: fileData.base64,
+          },
+        });
+      }
+    }
+
+    // Add text message
+    messageParts.push({ text: newMessage });
+
     const chat = model.startChat({ history: geminiHistory });
-    const result = await chat.sendMessage(newMessage);
+    const result = await chat.sendMessage(messageParts);
     return result.response.text();
   });
 };

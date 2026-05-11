@@ -1,14 +1,30 @@
 const mongoose = require('mongoose');
 
+// ─── USER MODEL ──────────────────────────────────────
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  nickname: { type: String, required: true },
+}, { timestamps: true });
+
 // ─── CHAT MODEL ──────────────────────────────────────
 const chatSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   nickname: { type: String, required: true },
+  title: { type: String, default: '' },
   mode: { type: String, enum: ['fest', 'placement', 'study', 'rant'], default: 'study' },
   messages: [
     {
       sender: { type: String, enum: ['user', 'bot'], required: true },
       message: { type: String, required: true },
       timestamp: { type: Date, default: Date.now },
+      attachment: {
+        name: String,
+        type: String,
+        size: Number,
+        data: String,
+        text: String,
+      },
       // Keep old fields for compatibility with existing sessions
       role: { type: String, enum: ['user', 'assistant'] },
       content: String
@@ -66,6 +82,7 @@ const interviewSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = {
+  User: mongoose.model('User', userSchema),
   Chat: mongoose.model('Chat', chatSchema),
   Idea: mongoose.model('Idea', ideaSchema),
   Talent: mongoose.model('Talent', talentSchema),
