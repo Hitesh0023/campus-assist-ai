@@ -1,0 +1,64 @@
+{
+  "appId": "com.campuspro.app",
+  "packageId": "com.campuspro.app",
+  "appName": "CampusPro",
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "startUrl": "https://campuspro.vercel.app/",
+  "iconUrl": "https://campuspro.vercel.app/icons/pwa-512x512.png",
+  "maskableIconUrl": "https://campuspro.vercel.app/icons/pwa-512x512-maskable.png",
+  "minSdkVersion": 21,
+  "targetSdkVersion": 34,
+  "preferredDisplayMode": "standalone",
+  "preferredOrientation": "portrait",
+  "enableNotifications": true,
+  "enableSiteSettingsShortcut": true,
+  "enableShareTarget": true,
+  "shareDataArray": [
+    {
+      "action": "/api/share",
+      "method": "POST",
+      "enctype": "multipart/form-data",
+      "title": "Share with CampusPro"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "startUrl": "/chat?newChat=true",
+      "icons": []
+    },
+    {
+      "name": "Interview Prep",
+      "short_name": "Placement",
+      "startUrl": "/placement",
+      "icons": []
+    },
+    {
+      "name": "View History",
+      "short_name": "History",
+      "startUrl": "/history",
+      "icons": []
+    }
+  ],
+  "generatorApp": "Bubblewrap",
+  "webManifestUrl": "https://campuspro.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": false,
+    "notificationDelegation": true,
+    "paymentRequestDelegation": false
+  },
+  "screenshotUrls": [
+    "https://campuspro.vercel.app/screenshots/mobile-1.png",
+    "https://campuspro.vercel.app/screenshots/mobile-2.png"
+  ],
+  "orientation": "portrait",
+  "themeColor": "#080810",
+  "backgroundColor": "#ffffff",
+  "displayMode": "standalone",
+  "categories": ["CATEGORY_PRODUCTIVITY"],
+  "isScopeIncluded": true,
+  "isNotTrusted": false
+}

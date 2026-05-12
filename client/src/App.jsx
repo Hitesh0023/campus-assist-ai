@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Navbar from './components/layout/Navbar';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { ToastContainer } from './components/shared';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -28,6 +29,7 @@ const AppShell = () => {
   return (
     <div className="app-layout">
       {user && <Navbar />}
+      <PWAInstallPrompt />
 
       <Routes>
         <Route path="/" element={<Landing />} />

@@ -1,9 +1,10 @@
 import axios from 'axios';
 
+const resolvedBaseURL = import.meta.env.VITE_API_BASE_URL || '';
+
 const api = axios.create({
-  // Use the configured backend URL in production.
-  // In local dev, fall back to the expected backend port when no env var is set.
-  baseURL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5001' : ''),
+  // Use the Vite proxy in development when no explicit backend URL is provided.
+  baseURL: resolvedBaseURL,
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -13,7 +14,7 @@ api.interceptors.response.use(
   err => {
     const backendMessage = err.response?.data?.error;
     const defaultMessage = err.code === 'ERR_NETWORK'
-      ? 'Cannot reach the backend API. Make sure the server is running on http://localhost:5001.'
+      ? 'Cannot reach the backend API. Make sure the server is running and check your backend URL.'
       : err.message || 'Something went wrong';
 
     return Promise.reject(new Error(backendMessage || defaultMessage));

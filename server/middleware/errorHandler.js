@@ -1,6 +1,16 @@
 const errorHandler = (err, req, res, next) => {
   console.error('❌ Error:', err.message);
 
+  // ── Malformed JSON body (body-parser / express.json) ─────────
+  // When a client sends invalid JSON with Content-Type: application/json,
+  // express.json throws a SyntaxError with type 'entity.parse.failed'.
+  if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && 'body' in err)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid JSON in request body'
+    });
+  }
+
   // ── Rate limit / quota exceeded ──────────────────
   if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('Too Many Requests')) {
     return res.status(429).json({

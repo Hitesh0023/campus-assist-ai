@@ -37,10 +37,16 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
+const isDevLocalOrigin = (origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      isDevLocalOrigin(origin)
+    ) {
       return callback(null, true);
     }
     callback(new Error('Not allowed by CORS'));
@@ -103,7 +109,7 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5002;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ CAMPUS ASSIT AI running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
 });

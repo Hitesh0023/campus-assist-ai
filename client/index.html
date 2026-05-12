@@ -1,16 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Basic Meta Tags -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    
     <title>CAMPUS ASSIT AI 🎓</title>
-    <meta name="description" content="Your AI-powered college companion" />
+    <meta name="description" content="Your AI-powered college companion for studying, placements, and talent development" />
+    <meta name="theme-color" content="#080810" />
+    <meta name="color-scheme" content="dark light" />
+    
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- PWA Meta Tags -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <meta name="application-name" content="CampusPro" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CampusPro" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#080810" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Open Graph / Social Media -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://campuspro.vercel.app" />
+    <meta property="og:title" content="CampusPro - AI College Assistant" />
+    <meta property="og:description" content="Your AI-powered college companion for studying, placements, and talent development" />
+    <meta property="og:image" content="https://campuspro.vercel.app/icons/pwa-512x512.png" />
+    
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://campuspro.vercel.app" />
+    <meta property="twitter:title" content="CampusPro - AI College Assistant" />
+    <meta property="twitter:description" content="Your AI-powered college companion for studying, placements, and talent development" />
+    <meta property="twitter:image" content="https://campuspro.vercel.app/icons/pwa-512x512.png" />
+    
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Icons & Manifest -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    
+    <!-- Apple Icons -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Fonts -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+    
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- Security & Performance -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+<meta http-equiv="Content-Security-Policy"
+content="connect-src 'self' http://localhost:5002 https: ws: wss:;">    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="permissions-policy" content="camera=(), microphone=(), geolocation=()" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap" as="style" />
   </head>
   <body>
+    <noscript>
+      <p>This application requires JavaScript to be enabled. Please enable JavaScript and reload the page.</p>
+    </noscript>
+    
     <div id="root"></div>
+    
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

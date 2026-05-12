@@ -242,7 +242,7 @@ Or create `.env` manually:
 ```env
 MONGO_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/campusbot
 GEMINI_API_KEY=AIzaSy_YOUR_GEMINI_API_KEY_HERE
-PORT=5001
+PORT=5002
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 ```
